@@ -1,0 +1,28 @@
+var a,b,ans,tmp1,tmp2,tmp3,tmp4:int64;
+    i,n,m,k:longint;
+
+
+begin
+assign(input,'factor.in');
+reset(input);
+assign(output,'factor.out');
+rewrite(output);
+
+readln(a,b,k,n,m);
+
+tmp1:=1;  tmp2:=1; tmp3:=1; tmp4:=1;
+for i:=m+1 to k do tmp1:=(tmp1*i) mod 10007;
+for i:=1 to n do tmp2:=(tmp2*i) mod 10007;
+for i:=1 to n do tmp3:=(tmp3*a) mod 10007;
+for i:=1 to m do tmp4:=(tmp4*b) mod 10007;
+
+ans:=1;
+ans:=ans*tmp3;// mod 10007;
+ans:=ans*tmp4;// mod 10007;
+ans:=ans*tmp1;// mod 10007;
+ans:=(ans div tmp2) mod 10007;
+writeln(ans);
+
+close(input);
+close(output);
+end.

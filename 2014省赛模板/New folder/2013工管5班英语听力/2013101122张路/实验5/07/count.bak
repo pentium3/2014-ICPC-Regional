@@ -1,0 +1,86 @@
+type abc=record
+     dat,time:longint;
+  // visited:boolean;
+     end;
+
+var a:array[1..200000] of abc;
+    i,j,n,num,tmp,x:longint;
+    found:boolean;
+
+procedure qsort(l,r: longint);
+var i,j,x,y: longint;
+begin
+i:=l;
+j:=r;
+x:=a[(l+r) div 2].dat;
+repeat
+ while a[i].dat<x do inc(i);
+ while x<a[j].dat do dec(j);
+ if not(i>j) then
+  begin
+  y:=a[i].dat;
+  a[i].dat:=a[j].dat;
+  a[j].dat:=y;
+
+  y:=a[i].time;
+  a[i].time:=a[j].time;
+  a[j].time:=y;
+
+  inc(i);
+  j:=j-1;
+  end;
+ until i>j;
+if l<j then qsort(l,j);
+if i<r then qsort(i,r);
+end;
+
+begin
+assign(input,'count.in');
+reset(input);
+assign(output,'count.out');
+rewrite(output);
+
+fillchar(a,sizeof(a),0);
+num:=0;
+
+readln(n);
+for i:=1 to n do
+ begin
+ readln(x);
+
+{if not visited[x] then
+  begin
+  inc(num);
+  a[num].dat:=x;
+  inc(a[num].time);
+  visited[x]:=true;
+  end
+ else
+  begin
+  for j:=1 to num do
+   if a[j].dat=x then begin tmp:=j; break; end;
+  inc(a[tmp].time);
+  end;   }
+
+ found:=false;
+ for j:=1 to num do
+  if a[j].dat=x then begin tmp:=j; found:=true; break; end;
+ if found then inc(a[tmp].time);
+
+ if not found then
+  begin
+  inc(num);
+  a[num].dat:=x;
+  inc(a[num].time);
+  end;
+
+ end;
+
+qsort(1,num);
+
+for i:=1 to num do
+ writeln(a[i].dat,' ',a[i].time);
+
+close(input);
+close(output);
+end.
