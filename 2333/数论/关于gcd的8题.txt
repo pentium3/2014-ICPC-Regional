@@ -1,0 +1,337 @@
+关于gcd的8题
+http://quartergeek.com/eight-gcd-problems/
+
+发现其实有关gcd的题目还是挺多的，这里根据做题顺序写出8题。
+/*-----------------------------------------------------------------------------------------*/
+[bzoj2818: Gcd] gcd(x,y)=质数, 1<=x,y<=n的对数
+
+做这题的时候，懂得了一个非常重要的转化：求(x, y) = k, 1 <= x, y <= n的对数等于求(x, y) = 1, 1 <= x, y <= n/k的对数！所以，枚举每个质数p（线性筛素数的方法见：线性时间内筛素数和欧拉函数），然后求(x, y) = 1, 1 <= x, y <= n/p的个数。
+
+那(x, y) = 1的个数如何求呢？其实就是求互质的数的个数。在[1, y]和y互质的数有phi(y)个，如果我们令x < y，那么答案就是sigma(phi(y))。因为x, y是等价的，所以答案*2，又因为(1, 1)只有一对，所以-1。最终答案为sigma(sigma(phi(n/prime[i])) * 2 - 1)。
+
+#include <cstdio>
+#include <algorithm>
+
+const int MAXN = 10000001;
+int n, primes;
+long long prime[MAXN], phi[MAXN];
+bool com[MAXN];
+int main()
+{
+  scanf("%d", &n);
+  for (int i = 2; i <= n; ++i)
+  {
+    if (!com[i])
+    {
+      prime[primes++] = i;
+      phi[i] = i-1;
+    }
+    for (int j = 0; j < primes && i*prime[j] <= n; ++j)
+    {
+      com[i*prime[j]] = true;
+      if (i % prime[j])
+        phi[i*prime[j]] = phi[i] * (prime[j]-1);
+      else
+        { phi[i*prime[j]] = phi[i] * prime[j]; break; }
+    }
+  }
+  phi[1] = 1;
+  for (int i = 2; i <= n; ++i) phi[i] += phi[i-1];
+  long long ans = 0;
+  for (int i = 0; i < primes; ++i) ans += phi[n/prime[i]]*2-1;
+  printf("%lld", ans);
+}
+/*-----------------------------------------------------------------------------------------*/
+[bzoj2190: [SDOI2008]仪仗队] 求gcd(x,y)=1, 0<=x,y<=n的对数
+
+嗯……似乎这题在上一题的时候解决了。不过要注意的是，这题范围是从0开始的，所以，会多出(1, 0)和(0, 1)这两组，答案就是sigma(phi(i)) - 1 + 2。
+/*-----------------------------------------------------------------------------------------*/
+[bzoj2005: [Noi2010]能量采集] 求sigma(gcd(x,y)), 1<=x<=n, 1<=y<=m
+
+令f[d]为(x, y) = d的对数，那么答案就是sigma(f[i]*((i-1)*2+1))
+
+f[i]怎么求呢？在1 <= x <= n, 1 <= y <= m中，gcd(x, y) | d的有[n/d] * [m/d]个。不过我们要扣掉所有的倍数，f[i] = [n/d] * [m/d] - f[2i] - f[3i] - f[4i] - ...。逆序做即可。
+
+后来我在想：
+
+    为什么上面几题不用这题的方法呢？嗯，因为x, y的取值不一样，这样的话就不得不把莫比乌斯反演搬出来了。
+    为什么这题不用上面几题的方法呢？嗯，因为这个的复杂度是O(nlogn)（O(n/1 + n/2 + ... + n/n) = O(nlogn)），而上面的复杂度只有O(n + n/logn)（质数个数是n/logn级别的）。
+
+#include <cstdio>
+#include <algorithm>
+
+const int MAXN = 100001;
+int n, m;
+long long f[MAXN];
+int main()
+{
+  scanf("%d%d", &n, &m);
+  if (n > m) std::swap(n, m);
+  long long ans = 0;
+  for (int i = n; i >= 1; --i)
+  {
+    f[i] = static_cast<long long>(n/i) * (m/i);
+    for (int j = i+i; j <= n; j += i)
+      f[i] -= f[j];
+    ans += f[i]*(2*i-1);
+  }
+  printf("%lld", ans);
+}
+/*-----------------------------------------------------------------------------------------*/
+[SPOJ VLATTICE] gcd(i,j,k)=1, 0<=i,j,k<=n 的个数
+
+莫比乌斯反演（M?bius inversion formula）终于出现了！莫比乌斯反演的基本形式就是：
+
+g(n) = sigma(d|n, f(d))
+f(n) = sigma(d|n, μ(n/d) * g(d))
+
+还有另外一个形式是：
+
+g(n) = sigma(d|n, f(d))
+f(n) = sigma(n|d, μ(n) * g(n/d))
+
+通俗的来说，g(n)和f(n)的关系，就是包含和仅包含的关系。
+
+令g(x)为满足x | (i, j, k)的个数，f(x)为满足(i, j, k) = x的个数。显然g(n) = sigma(d|n, f(d)) = [n/x] * [n/x] * [n/x]，所以答案f(1)就可以用下面那个公式算出来了，也就是sigma(μ(d) * [n/d] * [n/d] * [n/d])。
+
+不过需要注意的是，这题的范围可以取0，所以我们还需要加上某一维为0的，某两维为0的方案（基本一样啦）。
+
+#include <cstdio>
+#include <algorithm>
+
+const int MAXN = 1000000;
+inline long long sqr(const long long x) { return x * x; }
+inline long long cube(const long long x) { return x * x * x; }
+int Testcase, n, primes, prime[MAXN+1], mu[MAXN+1];
+void GetPrimes()
+{
+  static bool com[MAXN+1];
+  mu[1] = 1;
+  for (int i = 2; i <= MAXN; ++i)
+  {
+    if (!com[i])
+      { prime[primes++] = i; mu[i] = -1; }
+    for (int j = 0; j < primes && i*prime[j] <= MAXN; ++j)
+    {
+      com[i*prime[j]] = true;
+      if (i % prime[j]) mu[i*prime[j]] = -mu[i];
+      else { mu[i*prime[j]] = 0; break; }
+    }
+  }
+}
+int main()
+{
+  GetPrimes();
+  for (scanf("%d", &Testcase); Testcase--; )
+  {
+    scanf("%d", &n);
+    long long ans = 3;
+    for (int i = 1; i <= n; ++i) ans += mu[i] * cube(n/i);
+    for (int i = 1; i <= n; ++i) ans += mu[i] * sqr(n/i) * 3;
+    printf("%lld\n", ans);
+  }
+}
+/*-----------------------------------------------------------------------------------------*/
+[bzoj1101: [POI2007]Zap] 求有多少对数满足 gcd(x,y)=d, 1<=x<=a, 1<=y<=b
+
+首先肯定想到转化成求gcd(x, y) = 1, 1 <= x <= a/d, 1 <= y <= b/d的对数，和上面一题一样。虽然上面那题复杂度很优，只有O(n)，但是对于这边的多组数据完全就无法承受了。
+
+其实，只有O(sqrt(n))个不同的n/i的取值，因此我们可以求mu[i]的前缀和然后分块做！分块可以参考[CQOI2007]余数之和sum bzoj1257。
+
+#include <cstdio>
+#include <algorithm>
+
+const int MAXN = 50000;
+inline long long sqr(const long long x) { return x * x; }
+int Testcase, n, m, d, primes, prime[MAXN+1], mu[MAXN+1], sum[MAXN+1];
+void GetPrimes()
+{
+  static bool com[MAXN+1];
+  mu[1] = 1;
+  for (int i = 2; i <= MAXN; ++i)
+  {
+    if (!com[i])
+      { prime[primes++] = i; mu[i] = -1; }
+    for (int j = 0; j < primes && i*prime[j] <= MAXN; ++j)
+    {
+      com[i*prime[j]] = true;
+      if (i % prime[j]) mu[i*prime[j]] = -mu[i];
+      else { mu[i*prime[j]] = 0; break; }
+    }
+  }
+  for (int i = 1; i <= MAXN; ++i) sum[i] = sum[i-1] + mu[i];
+}
+int main()
+{
+  GetPrimes();
+  for (scanf("%d", &Testcase); Testcase--; )
+  {
+    scanf("%d%d%d", &n, &m, &d);
+    if (n > m) std::swap(n, m);
+    long long ans = 0;
+    n /= d, m /= d;
+    for (int i = 1, last; i <= n; i = last+1)
+    {
+      last = std::min(n/(n/i), m/(m/i));
+      ans += (sum[last]-sum[i-1]) * static_cast<long long>(n/i) * (m/i);
+    }
+    printf("%lld\n", ans);
+  }
+}
+/*-----------------------------------------------------------------------------------------*/
+[bzoj2301: [HAOI2011]Problem b] 求有多少对数满足 gcd(x,y)=k, a<=x<=b, c<=y<=d
+
+和上面那题几乎一样，只是多了x, y的下界。其实这个可以在算方案的时候yy一下，但是总觉得可能会哪里边界算错，于是就是用了一种偷懒的方法：容斥原理。事实上，这种方法并不会比只算一次的方法来的慢多少。
+
+记f[a, b]为满足(x, y) = 1, 1 <= x <= a, 1 <= y <= b的对数，那么答案就是f[B/K, D/K] - f[(A-1)/K, D/K] - f[B/K, (C-1)/K] + f[(A-1)/K, (C-1)/K]
+
+#include <cstdio>
+#include <algorithm>
+
+const int MAXN = 50000;
+inline long long sqr(const long long x) { return x * x; }
+int Testcase, A, B, C, D, K, primes, prime[MAXN+1], mu[MAXN+1], sum[MAXN+1];
+void GetPrimes()
+{
+  static bool com[MAXN+1];
+  mu[1] = 1;
+  for (int i = 2; i <= MAXN; ++i)
+  {
+    if (!com[i])
+      { prime[primes++] = i; mu[i] = -1; }
+    for (int j = 0; j < primes && i*prime[j] <= MAXN; ++j)
+    {
+      com[i*prime[j]] = true;
+      if (i % prime[j]) mu[i*prime[j]] = -mu[i];
+      else { mu[i*prime[j]] = 0; break; }
+    }
+  }
+  for (int i = 1; i <= MAXN; ++i) sum[i] = sum[i-1] + mu[i];
+}
+long long Process(int n, int m)
+{
+  long long res = 0;
+  if (n > m) std::swap(n, m);
+  for (int i = 1, last; i <= n; i = last+1)
+  {
+    last = std::min(n/(n/i), m/(m/i));
+    res += (sum[last]-sum[i-1]) * static_cast<long long>(n/i) * (m/i);
+  }
+  return res;
+}
+int main()
+{
+  GetPrimes();
+  for (scanf("%d", &Testcase); Testcase--; )
+  {
+    scanf("%d%d%d%d%d", &A, &B, &C, &D, &K);
+    long long ans = Process(B/K, D/K);
+    ans -= Process((A-1)/K, D/K);
+    ans -= Process(B/K, (C-1)/K);
+    ans += Process((A-1)/K, (C-1)/K);
+    printf("%lld\n", ans);
+  }
+}
+/*-----------------------------------------------------------------------------------------*/
+[bzoj2820: YY的GCD] [SPOJ PGCD 4491. Primes in GCD Table] 求1<=x<=N, 1<=y<=M且gcd(x,y)为质数有多少对
+
+如果枚举质数的话就要给这个多组数据跪成傻逼了。
+
+ans = sigma(p, sigma(d, μ(d) * (n/pd) * (m/pd)))
+
+Let s = pd, then
+
+ans = sigma(s, sigma(p, μ(s/p) * (n/s) * (m/s)))
+    = sigma(s, (n/s) * (m/s) * sigma(p, μ(s/p)))
+
+Let g(x) = sigma(p, μ(x/p)), then
+
+ans = sigma(s, (n/s) * (m/s) * g(s))
+
+如果我们能预处理g(x)的话就能和前面一样分块搞了。这个时候我们多么希望g(x)和μ(x)一样是积性函数。看完题解后，发现有一个不是积性函数，胜似积性函数的性质。由于题解没有给证明，所以就意淫了一个证明。
+
+考虑质数p'，g(p'x) = sigma(p | p'x, μ(p'x/p))。
+
+    当x % p' == 0，那么考虑sigma中的变量p的所有取值，它和g(x)中p是相同的。而μ(x)这个函数，如果x有平方因子的话就等于0，因此当p != p'时μ(p'x/p) = 0，当p == p'是，μ(p'x/p) = μ(x)。所以g(p'x) = μ(x)。
+    当x % p' != 0，同样考虑p，会发现它的取值只比g(x)中的p多出一个p'。同理按照p是否等于p'讨论，可以得到g(p'x) = -g(x) + μ(x)。
+
+因此g(x)可以在线性筛素数的时候算出。剩下的就是前缀和、分块了。
+
+#include <cstdio>
+#include <algorithm>
+
+const int MAXN = 10000000;
+int Testcase, n, m, primes, prime[MAXN+1], mu[MAXN+1], g[MAXN+1], sum[MAXN+1];
+void GetPrimes()
+{
+  static bool com[MAXN+1];
+  mu[1] = 1;
+  for (int i = 2; i <= MAXN; ++i)
+  {
+    if (!com[i])
+      prime[primes++] = i, mu[i] = -1, g[i] = 1;
+    for (int j = 0; j < primes && i*prime[j] <= MAXN; ++j)
+    {
+      com[i*prime[j]] = true;
+      if (i % prime[j]) mu[i*prime[j]] = -mu[i], g[i*prime[j]] = -g[i] + mu[i];
+      else { mu[i*prime[j]] = 0, g[i*prime[j]] = mu[i]; break; }
+    }
+  }
+  for (int i = 1; i <= MAXN; ++i) sum[i] = sum[i-1] + g[i];
+}
+int main()
+{
+  GetPrimes();
+  for (scanf("%d", &Testcase); Testcase--; )
+  {
+    scanf("%d%d", &n, &m);
+    if (n > m) std::swap(n, m);
+    long long ans = 0;
+    for (int i = 1, last; i <= n; i = last+1)
+    {
+      last = std::min(n/(n/i), m/(m/i));
+      ans += (n/i) * static_cast<long long>(m/i) * (sum[last]-sum[i-1]);
+    }
+    printf("%lld\n", ans);
+  }
+}
+/*-----------------------------------------------------------------------------------------*/
+[bzoj2705: [SDOI2012]Longge的问题] 求 sigma(gcd(i,n), 1<=i<=n<2^32)
+
+又是令gcd(i, n) = d，答案就是sigma(phi(n/d))，但是我们不能预处理出phi[]数组，因为开不了数组……
+
+注意到因数个数是O(2sqrt(n))级别的，我们枚举所有的n/d，一边dfs一边算phi。
+
+#include <cmath>
+#include <cstdio>
+
+int n, cnt, p[30], c[30];
+long long ans = 0;
+void dfs(const int step, int pdt, int phi)
+{
+  if (step == cnt)
+  {
+    ans += phi;
+    return;
+  }
+  dfs(step+1, pdt, phi);
+  phi = phi / p[step] * (p[step]-1);
+  for (int i = 1; i <= c[step]; ++i)
+    dfs(step+1, pdt *= p[step], phi);
+}
+int main()
+{
+  scanf("%d", &n);
+  int x = n;
+  for (int i = 2; i*i <= x; ++i)
+    if (x % i == 0)
+    {
+      for (; x % i == 0; x /= i) ++c[cnt];
+      p[cnt++] = i;
+    }
+  if (x > 1) c[cnt] = 1, p[cnt++] = x;
+
+  dfs(0, 1, n);
+  printf("%lld\n", ans);
+}
+/*-----------------------------------------------------------------------------------------*/
