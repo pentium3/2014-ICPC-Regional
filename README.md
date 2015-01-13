@@ -1,4 +1,4 @@
-2014-ICPC-Regional
+ICPC-Regional
 ==================
 
 2014 ICPC Regional - GuangZhou
